@@ -15,9 +15,10 @@ class DeepClassifier(nn.Module):
         '''
         Saves the model, adds suffix to filename if given
         '''
-
-        ## TODO implement
-        pass
+        filename = "model.pth"
+        if suffix is not None:
+            filename = f"model_{suffix}.pth"
+        torch.save(self.net.state_dict(), save_dir / filename)
 
     def load(self, path):
         '''
@@ -25,5 +26,4 @@ class DeepClassifier(nn.Module):
         Does not work with transfer model
         '''
         
-        ## TODO implement
-        pass
+        self.net.load_state_dict(torch.load(path, weights_only=True))
