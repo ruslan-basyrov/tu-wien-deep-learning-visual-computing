@@ -1,7 +1,7 @@
 import pickle
 from typing import Tuple
 import numpy as np
-
+from pathlib import Path
 
 from assignment_1_code.datasets.dataset import Subset, ClassificationDataset
 
@@ -52,17 +52,42 @@ class CIFAR10Dataset(ClassificationDataset):
         Labels should be returned either as a Python list of ints or as a
         numpy array with dtype int64.
         """
+        
+        def unpickle(file):
+            with open(file, 'rb') as fo:
+                dict = pickle.load(fo, encoding='bytes')
+            return dict
 
-        # TODO implement
-        # See the CIFAR-10 website on how to load the data files
-        pass
+        if not Path(self.fdir).is_dir():
+            raise ValueError(f"{self.fdir} is not a directory")
+
+        subset_files = {
+            Subset.TRAINING:   ["data_batch_1", "data_batch_2", "data_batch_3", "data_batch_4"],
+            Subset.VALIDATION: ["data_batch_5"],
+            Subset.TEST:       ["test_batch"],
+        }
+        files = subset_files[self.subset]
+        
+        all_images = []
+        all_labels = []
+        for file in files:
+            fpath = self.fdir / file
+            if not fpath.exists():
+                raise ValueError(f"Missing file: {fpath}")
+            d = unpickle(fpath)
+            N = len(d[b"labels"])
+            all_images.append(d[b"data"].reshape(N, 3, 32, 32).transpose(0, 2, 3, 1))
+            all_labels.extend(d[b"labels"])
+
+        images = np.concatenate(all_images, axis=0).astype(np.uint8)
+        labels = np.array(all_labels, dtype=np.int64)
+        return images, labels
 
     def __len__(self) -> int:
         """
         Returns the number of samples in the dataset.
         """
-        # TODO implement
-        pass
+        return len(self.images)
 
     def __getitem__(self, idx: int) -> Tuple:
         """
@@ -71,12 +96,16 @@ class CIFAR10Dataset(ClassificationDataset):
         Applies transforms if not None.
         Raises IndexError if the index is out of bounds.
         """
-        # TODO implement
-        pass
+        if idx < 0 or idx >= len(self):
+            raise IndexError(f"Index {idx} is out of bounds")
+        image = self.images[idx]
+        label = self.labels[idx]
+        if self.transform:
+            image = self.transform(image)
+        return image, label
 
     def num_classes(self) -> int:
         """
         Returns the number of classes.
         """
-        # TODO implement
-        pass
+        return len(self.classes)

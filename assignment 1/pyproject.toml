@@ -1,0 +1,8 @@
+[project]
+name = "dlvs-assignment-1"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.4.4",
+    "path>=17.1.1",
+]
