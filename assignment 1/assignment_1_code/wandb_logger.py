@@ -8,7 +8,8 @@ class WandBLogger:
 
     def __init__(self, enabled=True, 
                  model: torch.nn.modules=None, 
-                 run_name: str=None) -> None:
+                 run_name: str=None,
+                 config = None) -> None:
         
         self.enabled = enabled
 
@@ -17,7 +18,8 @@ class WandBLogger:
         if self.enabled:
             wandb.init(entity="ruslanbasyrov-tu-wien",
                         project="dlvs-assignment-1",
-                        group="experiments")
+                        group="experiments",
+                        config=config)
             if run_name is None:
                 wandb.run.name = wandb.run.id    
             else:

@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+import time
+from torch.amp import autocast, GradScaler
 
 # for wandb users:
 from assignment_1_code.wandb_logger import WandBLogger
@@ -59,6 +61,7 @@ class ImgClassificationTrainer(BaseTrainer):
         training_save_dir: Path,
         batch_size: int = 4,
         val_frequency: int = 5,
+        logger = None,
     ) -> None:
         """
         Args and Kwargs:
@@ -95,10 +98,14 @@ class ImgClassificationTrainer(BaseTrainer):
         self.training_save_dir = training_save_dir
         self.val_frequency = val_frequency
 
-        self.train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-        self.val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+        self.train_loader = DataLoader(train_data, batch_size=batch_size, pin_memory=True, \
+            prefetch_factor = 8, num_workers=16, shuffle=True, persistent_workers=True)
+        self.val_loader = DataLoader(val_data, batch_size=batch_size, pin_memory=True, \
+            prefetch_factor = 8, num_workers=16, shuffle=False, persistent_workers=True)
 
-        self.logger = WandBLogger(enabled=True) 
+        self.logger = logger or WandBLogger(enabled=False)
+
+        self.scaler = GradScaler()
 
     def _train_epoch(self, epoch_idx: int) -> Tuple[float, float, float]:
         """
@@ -116,12 +123,14 @@ class ImgClassificationTrainer(BaseTrainer):
         for images, labels in tqdm(self.train_loader, desc = f"Train epoch {epoch_idx}"):
             images, labels = images.to(self.device), labels.to(self.device)
             self.optimizer.zero_grad()
-            outputs = self.model(images)
-            loss = self.loss_fn(outputs, labels)
-            loss.backward()
-            self.optimizer.step()
+            with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+                outputs = self.model(images)
+                loss = self.loss_fn(outputs, labels)
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
             total_loss += loss.item()
-            self.train_metric.update(outputs, labels)
+            self.train_metric.update(outputs.float(), labels)
 
         accuracy = self.train_metric.accuracy()
         mean_accuracy = self.train_metric.per_class_accuracy()
@@ -140,16 +149,17 @@ class ImgClassificationTrainer(BaseTrainer):
         """
         
         self.model.eval()
-        self.train_metric.reset()
+        self.val_metric.reset()
         total_loss = 0.0
 
         with torch.no_grad():
             for images, labels in tqdm(self.val_loader, desc = f"Val epoch {epoch_idx}"):
                 images, labels = images.to(self.device), labels.to(self.device)
-                outputs = self.model(images)
-                loss = self.loss_fn(outputs, labels)
+                with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+                    outputs = self.model(images)
+                    loss = self.loss_fn(outputs, labels)
                 total_loss += loss.item()
-                self.val_metric.update(outputs, labels)
+                self.val_metric.update(outputs.float(), labels)
 
         accuracy = self.val_metric.accuracy()
         mean_accuracy = self.val_metric.per_class_accuracy()
@@ -168,6 +178,7 @@ class ImgClassificationTrainer(BaseTrainer):
         than currently saved best mean per class accuracy.
         Depending on the val_frequency parameter, validation is not performed every epoch.
         """
+        t_start = time.time()
         best_mean_accuracy = 0.0
 
         for epoch in range(self.num_epochs):
@@ -187,4 +198,5 @@ class ImgClassificationTrainer(BaseTrainer):
             
             self.lr_scheduler.step()
 
+        self.logger.log({"total_train_time_s": time.time() - t_start})
         self.logger.finish()
