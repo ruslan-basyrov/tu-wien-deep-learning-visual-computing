@@ -1,0 +1,64 @@
+meta:
+  name: Acuity
+typography:
+  # Font with improved legibility and readability (https://www.brailleinstitute.org/freefont/)
+  fonts:
+    - family: Atkinson Hyperlegible Next
+      source: google
+    - family: Roboto
+      source: google
+  base: Atkinson Hyperlegible Next
+  headings: Roboto
+
+  monospace-block:
+    background-color:
+      light: "#F4F4F5"     # same as light.light
+      dark: "#27272A"      # same as dark.light
+  monospace-inline:
+    color:
+      light: "#1C1B1B"    # same as foreground.light
+      dark: "#EEEEEE"     # same as foreground.dark
+    background-color:
+      light: "#F4F4F5"
+      dark: "#27272A"
+
+# Paul Tol's color palette for colour-blind people (https://sronpersonalpages.nl/~pault/)
+color:
+  palette:
+    rose: "#CC6677"
+    blue: "#332288"
+    sand: "#DDCC77"
+    green: "#117733"
+    cyan: "#88CCEE"
+    wine: "#882255"
+    teal: "#44AA99"
+    olive: "#999933"
+    purple: "#AA4499"
+    gray: "#DDDDDD"
+    black: "#000000"
+    white: "#FFFFFF"
+  primary:
+    light: "#D42C26"
+    dark: "#E55B56" 
+  secondary:
+    light: "#52525B" 
+    dark: "#A1A1AA"  
+  tertiary:
+    light: "#8B8D8E" 
+    dark: "#71717A"  
+  success: green
+  info: cyan
+  warning: sand
+  danger: wine
+  light:
+    light: "#F4F4F5" 
+    dark: "#202023"  
+  dark:
+    light: "#27272A" 
+    dark: "#E4E4E7"  
+  foreground:
+    light: "#1C1B1B" 
+    dark: "#EEEEEE"  
+  background:
+    light: "#FBFBF9" 
+    dark: "#1C1B1B"

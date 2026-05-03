@@ -6,3 +6,9 @@
 **/.env
 **/wandb/
 **/saved_models/
+
+# Quarto build artifacts
+**/_acuity
+**/_extensions
+**/site_libs
+**/*.typ

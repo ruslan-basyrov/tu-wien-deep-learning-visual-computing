@@ -1,0 +1,12 @@
+---
+title: "Assignment 1"
+subtitle: "Deep Learning for Visual Computing"
+author:
+  - name: "Ruslan Basyrov"
+    email: ruslan.basyrov@tuwien.ac.at
+  - name: "Iana Bembeeva"
+    email: e52017248@student.tuwien.ac.at
+    
+bibliography: bibliography.bib
+---
+

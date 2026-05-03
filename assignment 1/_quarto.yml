@@ -1,0 +1,18 @@
+website:
+  sidebar:
+    style: "floating"
+    collapsible: true
+    search: false
+    tools:
+      - icon: github
+        href: https://github.com/ruslan-basyrov/tu-wien-deep-learning-visual-computing
+
+project:
+  type: acuity
+
+format:
+  acuity-html:
+    respect-user-color-scheme: true
+    syntax-highlighting: github
+  acuity-typst:
+    keep-typ: true
