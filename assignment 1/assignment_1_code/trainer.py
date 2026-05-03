@@ -3,6 +3,7 @@ from typing import Tuple
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 # for wandb users:
 from assignment_1_code.wandb_logger import WandBLogger
@@ -83,8 +84,21 @@ class ImgClassificationTrainer(BaseTrainer):
 
         """
 
-        ## TODO implement
-        pass
+        self.model = model
+        self.optimizer = optimizer
+        self.loss_fn = loss_fn
+        self.lr_scheduler = lr_scheduler
+        self.train_metric = train_metric
+        self.val_metric = val_metric
+        self.device = device
+        self.num_epochs = num_epochs
+        self.training_save_dir = training_save_dir
+        self.val_frequency = val_frequency
+
+        self.train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+
+        self.logger = WandBLogger(enabled=True) 
 
     def _train_epoch(self, epoch_idx: int) -> Tuple[float, float, float]:
         """
@@ -94,8 +108,27 @@ class ImgClassificationTrainer(BaseTrainer):
 
         epoch_idx (int): Current epoch number
         """
-        ## TODO implement
-        pass
+        
+        self.model.train()
+        self.train_metric.reset()
+        total_loss = 0.0
+
+        for images, labels in tqdm(self.train_loader, desc = f"Train epoch {epoch_idx}"):
+            images, labels = images.to(self.device), labels.to(self.device)
+            self.optimizer.zero_grad()
+            outputs = self.model(images)
+            loss = self.loss_fn(outputs, labels)
+            loss.backward()
+            self.optimizer.step()
+            total_loss += loss.item()
+            self.train_metric.update(outputs, labels)
+
+        accuracy = self.train_metric.accuracy()
+        mean_accuracy = self.train_metric.per_class_accuracy()
+        mean_loss = total_loss / len(self.train_loader)
+        print(f"______epoch {epoch_idx}\n{self.train_metric}")
+        return accuracy, mean_accuracy, mean_loss
+
 
     def _val_epoch(self, epoch_idx: int) -> Tuple[float, float, float]:
         """
@@ -105,8 +138,27 @@ class ImgClassificationTrainer(BaseTrainer):
 
         epoch_idx (int): Current epoch number
         """
-        ## TODO implement
-        pass
+        
+        self.model.eval()
+        self.train_metric.reset()
+        total_loss = 0.0
+
+        with torch.no_grad():
+            for images, labels in tqdm(self.val_loader, desc = f"Val epoch {epoch_idx}"):
+                images, labels = images.to(self.device), labels.to(self.device)
+                outputs = self.model(images)
+                loss = self.loss_fn(outputs, labels)
+                total_loss += loss.item()
+                self.val_metric.update(outputs, labels)
+
+        accuracy = self.val_metric.accuracy()
+        mean_accuracy = self.val_metric.per_class_accuracy()
+        mean_loss = total_loss / len(self.val_loader)
+        print(f"______epoch {epoch_idx}\n{self.val_metric}")
+        return accuracy, mean_accuracy, mean_loss
+
+
+
 
     def train(self) -> None:
         """
@@ -116,5 +168,23 @@ class ImgClassificationTrainer(BaseTrainer):
         than currently saved best mean per class accuracy.
         Depending on the val_frequency parameter, validation is not performed every epoch.
         """
-        ## TODO implement
-        pass
+        best_mean_accuracy = 0.0
+
+        for epoch in range(self.num_epochs):
+            train_accuracy, train_mean_accuracy, train_mean_loss = self._train_epoch(epoch)
+            self.logger.log({"train/accuracy": train_accuracy, 
+                            "train/mean_accuracy": train_mean_accuracy, 
+                            "train/mean_loss": train_mean_loss})
+            if (epoch + 1) % self.val_frequency == 0:
+                val_accuracy, val_mean_accuracy, val_mean_loss = self._val_epoch(epoch)
+                self.logger.log({"val/accuracy": val_accuracy, 
+                                "val/mean_accuracy": val_mean_accuracy, 
+                                "val/mean_loss": val_mean_loss})
+                    
+                if val_mean_accuracy > best_mean_accuracy:
+                    best_mean_accuracy = val_mean_accuracy
+                    self.model.save(self.training_save_dir, suffix = "best")
+            
+            self.lr_scheduler.step()
+
+        self.logger.finish()

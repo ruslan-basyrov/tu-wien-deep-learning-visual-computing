@@ -3,3 +3,6 @@
 **/*.tar.gz
 **/*.pyc
 **/__pycache__
+**/.env
+**/wandb/
+**/saved_models/

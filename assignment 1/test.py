@@ -1,4 +1,5 @@
 # Feel free to change the imports according to your implementation and needs
+from pyperclip import is_available
 import argparse
 import os
 import torch
@@ -11,7 +12,8 @@ from assignment_1_code.metrics import Accuracy
 from assignment_1_code.datasets.cifar10 import CIFAR10Dataset
 from assignment_1_code.datasets.dataset import Subset
 from config import DATA_DIR, MODEL_SAVE_DIR
-
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 def test(args):
 
@@ -24,23 +26,32 @@ def test(args):
     )
 
     # Use config.py for machine-dependent paths, e.g. DATA_DIR and MODEL_SAVE_DIR.
-    test_data = CIFAR10Dataset(DATA_DIR, ...)
-    test_data_loader = ...
+    test_data = CIFAR10Dataset(DATA_DIR, Subset.TEST, transform=transform)
+    test_data_loader = DataLoader(test_data, batch_size = 128, shuffle = False)
 
-    device = ...
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_test_data = len(test_data)
 
-    model = DeepClassifier(...)
+    model = DeepClassifier(resnet18())
     model.load(args.path_to_trained_model)
     model.to(device)
 
     loss_fn = torch.nn.CrossEntropyLoss()
 
     test_metric = Accuracy(classes=test_data.classes)
+    
+    total_loss = 0.0
 
-    # Below implement testing loop and print final loss
-    # and metrics to terminal after testing is finished
-    # ...
+    with torch.no_grad():
+        for images, labels in test_data_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            loss = loss_fn(outputs, labels)
+            total_loss += loss.item()
+            test_metric.update(outputs, labels)
+    
+    print(f"test loss: {total_loss / len(test_data_loader)}")
+    print(test_metric)
 
 
 if __name__ == "__main__":

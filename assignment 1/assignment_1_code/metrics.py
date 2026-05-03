@@ -85,11 +85,11 @@ class Accuracy(PerformanceMeasure):
         - individual per-class accuracies for all classes
         """
         accuracy = self.accuracy()
-        mean_accuracy = self.per_class_accuracies()
+        mean_accuracy = self.per_class_accuracy()
 
         lines = [f"accuracy: {accuracy:.4f}", f"per class accuracy: {mean_accuracy:.4f}"]
-        for c, a in self.per_class_accuracy():
-            lines.append(f"Accuracy for class: {c} is {a:.4f}")
+        for c, a in self.per_class_accuracies.items():
+            lines.append(f"Accuracy for class: {c:<5} is {a:.2f}")
 
         return "\n".join(lines)
 
