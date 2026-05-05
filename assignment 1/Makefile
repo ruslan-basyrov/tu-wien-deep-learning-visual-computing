@@ -24,7 +24,10 @@ figures/%.svg: build/figures/%.qmd
 
 figures: $(BUILT_QMDS) $(BUILT_SVGS)
 
-report: figures
+build/tables/results_table.md: results/summary.csv src/scripts/gen_results_table.py
+	python src/scripts/gen_results_table.py results/summary.csv build/tables/results_table.md
+
+report: figures build/tables/results_table.md
 	quarto render index.qmd
 
 wandb:

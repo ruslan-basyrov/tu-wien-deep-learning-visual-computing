@@ -10,7 +10,17 @@ author:
 bibliography: bibliography.bib
 ---
 
+## ViT Implementation
+
+The ViT implementation is adapted from [@wangLucidrainsVitpytorch2026] and modified for CIFAR-10 classification.
+
 ## Results
+
+### Table 4: Best Configuration per Model
+
+::: {.wideblock}
+{{< include build/tables/results_table.md >}}
+:::
 
 ### Test Accuracy by Model
 
