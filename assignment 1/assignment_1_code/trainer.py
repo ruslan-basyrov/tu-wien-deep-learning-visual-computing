@@ -61,6 +61,9 @@ class ImgClassificationTrainer(BaseTrainer):
         training_save_dir: Path,
         batch_size: int = 4,
         val_frequency: int = 5,
+        num_workers: int = 4,
+        prefetch_factor: int = 2,
+        persistent_workers: bool = True,
         logger = None,
     ) -> None:
         """
@@ -98,14 +101,30 @@ class ImgClassificationTrainer(BaseTrainer):
         self.training_save_dir = training_save_dir
         self.val_frequency = val_frequency
 
-        self.train_loader = DataLoader(train_data, batch_size=batch_size, pin_memory=True, \
-            prefetch_factor = 8, num_workers=16, shuffle=True, persistent_workers=True)
-        self.val_loader = DataLoader(val_data, batch_size=batch_size, pin_memory=True, \
-            prefetch_factor = 8, num_workers=16, shuffle=False, persistent_workers=True)
+        pin_memory = self.device.type == "cuda"
+        loader_kwargs = {
+            "batch_size": batch_size,
+            "pin_memory": pin_memory,
+            "num_workers": num_workers,
+        }
+        if num_workers > 0:
+            loader_kwargs["prefetch_factor"] = prefetch_factor
+            loader_kwargs["persistent_workers"] = persistent_workers
+
+        self.train_loader = DataLoader(
+            train_data,
+            shuffle=True,
+            **loader_kwargs,
+        )
+        self.val_loader = DataLoader(
+            val_data,
+            shuffle=False,
+            **loader_kwargs,
+        )
 
         self.logger = logger or WandBLogger(enabled=False)
-
-        self.scaler = GradScaler()
+        self.use_amp = self.device.type == "cuda"
+        self.scaler = GradScaler(enabled=self.use_amp)
 
     def _train_epoch(self, epoch_idx: int) -> Tuple[float, float, float]:
         """
@@ -120,15 +139,21 @@ class ImgClassificationTrainer(BaseTrainer):
         self.train_metric.reset()
         total_loss = 0.0
 
-        for images, labels in tqdm(self.train_loader, desc = f"Train epoch {epoch_idx}"):
+        for images, labels in tqdm(self.train_loader, desc=f"Train epoch {epoch_idx}"):
             images, labels = images.to(self.device), labels.to(self.device)
             self.optimizer.zero_grad()
-            with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+            if self.use_amp:
+                with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+                    outputs = self.model(images)
+                    loss = self.loss_fn(outputs, labels)
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
                 outputs = self.model(images)
                 loss = self.loss_fn(outputs, labels)
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
+                loss.backward()
+                self.optimizer.step()
             total_loss += loss.item()
             self.train_metric.update(outputs.float(), labels)
 
@@ -153,9 +178,13 @@ class ImgClassificationTrainer(BaseTrainer):
         total_loss = 0.0
 
         with torch.no_grad():
-            for images, labels in tqdm(self.val_loader, desc = f"Val epoch {epoch_idx}"):
+            for images, labels in tqdm(self.val_loader, desc=f"Val epoch {epoch_idx}"):
                 images, labels = images.to(self.device), labels.to(self.device)
-                with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+                if self.use_amp:
+                    with autocast(device_type=self.device.type, dtype=torch.bfloat16):
+                        outputs = self.model(images)
+                        loss = self.loss_fn(outputs, labels)
+                else:
                     outputs = self.model(images)
                     loss = self.loss_fn(outputs, labels)
                 total_loss += loss.item()

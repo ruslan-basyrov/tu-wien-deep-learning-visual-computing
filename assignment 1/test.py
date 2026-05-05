@@ -1,5 +1,4 @@
 # Feel free to change the imports according to your implementation and needs
-from pyperclip import is_available
 import argparse
 import os
 import torch
