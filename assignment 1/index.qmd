@@ -25,3 +25,23 @@ bibliography: bibliography.bib
 Validation mean per-class accuracy for the best CNN, ResNet18, and ViT configurations. The checkpoint for each model was selected according to the highest validation mean per-class accuracy.
 
 :::
+
+### Figure 3: CNN Ablation — Augmentation & Regularization
+
+::: {#fig-cnn-ablation}
+
+{{< include build/figures/cnn_ablation.qmd >}}
+
+Validation mean per-class accuracy for selected CNN configurations varying augmentation strategy, weight decay, and dropout.
+
+:::
+
+### Figure 4: ViT Experiments
+
+::: {#fig-vit-ablation}
+
+{{< include build/figures/vit_ablation.qmd >}}
+
+Validation mean per-class accuracy for selected ViT configurations varying augmentation strategy, weight decay, and dropout.
+
+:::

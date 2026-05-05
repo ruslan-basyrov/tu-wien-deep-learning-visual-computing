@@ -1,6 +1,6 @@
 .PHONY: uv tests quarto figures report wandb
 
-FIGS := test_accuracy val_accuracy_curves
+FIGS := test_accuracy val_accuracy_curves cnn_ablation vit_ablation
 
 BUILT_QMDS := $(addprefix build/figures/,$(addsuffix .qmd,$(FIGS)))
 BUILT_SVGS  := $(addprefix figures/,$(addsuffix .svg,$(FIGS)))

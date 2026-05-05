@@ -1,0 +1,104 @@
+{% if format == "html" %}
+
+summary = FileAttachment("results/summary.csv").csv({ typed: true })
+history = FileAttachment("results/history.csv").csv({ typed: true })
+
+vitConfigs = [
+  { augmentation: "strong", weight_decay: 0,    dropout: 0.05, label: "strong wd=0 d=0.05" },
+  { augmentation: "strong", weight_decay: 1e-4, dropout: 0.1,  label: "strong wd=1e-4 d=0.1" },
+  { augmentation: "strong", weight_decay: 1e-3, dropout: 0.05, label: "strong wd=1e-3 d=0.05" },
+  { augmentation: "basic",  weight_decay: 1e-3, dropout: 0.1,  label: "basic wd=1e-3 d=0.1" },
+]
+
+function matchViT(d, cfg) {
+  return d.augmentation === cfg.augmentation
+    && Math.abs(d.weight_decay - cfg.weight_decay) < 1e-10
+    && Math.abs(d.dropout - cfg.dropout) < 1e-10
+}
+
+vitRunMap = new Map(
+  summary
+    .filter(d => d.group === "yourViT")
+    .flatMap(d => {
+      const cfg = vitConfigs.find(c => matchViT(d, c))
+      return cfg ? [[d.run_id, cfg.label]] : []
+    })
+)
+
+vitHistory = history
+  .filter(d => vitRunMap.has(d.run_id) && d["val/mean_accuracy"] != null)
+  .map(d => ({ epoch: d._step, accuracy: d["val/mean_accuracy"], config: vitRunMap.get(d.run_id) }))
+
+{% elif format == "pdf" %}
+
+const summary = d3.csvParse(readFileSync("results/summary.csv", "utf8"), d3.autoType);
+const history = d3.csvParse(readFileSync("results/history.csv", "utf8"), d3.autoType);
+
+const vitConfigs = [
+  { augmentation: "strong", weight_decay: 0,    dropout: 0.05, label: "strong wd=0 d=0.05" },
+  { augmentation: "strong", weight_decay: 1e-4, dropout: 0.1,  label: "strong wd=1e-4 d=0.1" },
+  { augmentation: "strong", weight_decay: 1e-3, dropout: 0.05, label: "strong wd=1e-3 d=0.05" },
+  { augmentation: "basic",  weight_decay: 1e-3, dropout: 0.1,  label: "basic wd=1e-3 d=0.1" },
+];
+
+function matchViT(d, cfg) {
+  return d.augmentation === cfg.augmentation
+    && Math.abs(d.weight_decay - cfg.weight_decay) < 1e-10
+    && Math.abs(d.dropout - cfg.dropout) < 1e-10;
+}
+
+const vitRunMap = new Map(
+  summary
+    .filter(d => d.group === "yourViT")
+    .flatMap(d => {
+      const cfg = vitConfigs.find(c => matchViT(d, c));
+      return cfg ? [[d.run_id, cfg.label]] : [];
+    })
+);
+
+const vitHistory = history
+  .filter(d => vitRunMap.has(d.run_id) && d["val/mean_accuracy"] != null)
+  .map(d => ({ epoch: d._step, accuracy: d["val/mean_accuracy"], config: vitRunMap.get(d.run_id) }));
+
+{% endif %}
+
+
+{% if format == "pdf" %}const figure = {% endif %}Plot.plot({
+  width: 640,
+  height: 300,
+  marginRight: 140,
+  {% if format == "pdf" %}document: dom.window.document,{% endif %}
+  x: { label: "Epoch" },
+  y: {
+    label: "Val Per-Class Accuracy",
+    tickFormat: d => `${(d * 100).toFixed(0)}%`
+  },
+  color: {
+    legend: {% if format == "html" %}true{% else %}false{% endif %},
+    domain: vitConfigs.map(c => c.label)
+  },
+  marks: [
+    Plot.line(vitHistory, {
+      x: "epoch",
+      y: "accuracy",
+      stroke: "config",
+      strokeWidth: 2,
+      {% if format == "html" %}tip: true,{% endif %}
+    }),
+    Plot.dot(vitHistory, {
+      x: "epoch",
+      y: "accuracy",
+      fill: "config",
+      r: 3
+    }),
+    Plot.text(vitHistory, Plot.selectLast({
+      x: "epoch",
+      y: "accuracy",
+      text: "config",
+      fill: "config",
+      dx: 6,
+      textAnchor: "start",
+      fontSize: 10
+    }))
+  ]
+})
