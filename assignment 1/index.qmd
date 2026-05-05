@@ -10,3 +10,9 @@ author:
 bibliography: bibliography.bib
 ---
 
+## Results
+
+### Test Accuracy by Model
+
+{{< include build/figures/test_accuracy.qmd >}}
+

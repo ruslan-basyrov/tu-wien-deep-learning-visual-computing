@@ -1,0 +1,43 @@
+{% if format == "html" %}
+
+summary = FileAttachment("results/summary.csv").csv({ typed: true })
+
+{% elif format == "pdf" %}
+
+const summary = d3.csvParse(readFileSync("results/summary.csv", "utf8"), d3.autoType);
+
+{% endif %}
+
+
+{% if format == "pdf" %}const figure = {% endif %}Plot.plot({
+  marginLeft: 80,
+  width: 640,
+  height: 200,
+  {% if format == "pdf" %}document: dom.window.document,{% endif %}
+  x: {
+    label: "Test Accuracy",
+    tickFormat: d => `${(d * 100).toFixed(0)}%`,
+    domain: [0.4, 1.0]
+  },
+  y: { label: null },
+  color: { legend: {% if format == "html" %}true{% else %}false{% endif %} },
+  marks: [
+    Plot.dot(summary, {
+      x: d => d["test/accuracy"],
+      y: "group",
+      fill: "group",
+      r: 5,
+      opacity: 0.6,
+      {% if format == "html" %}tip: true,{% endif %}
+    }),
+    Plot.tickX(
+      summary,
+      Plot.groupY({ x: "max" }, {
+        x: d => d["test/accuracy"],
+        y: "group",
+        stroke: "group",
+        strokeWidth: 2.5
+      })
+    )
+  ]
+})

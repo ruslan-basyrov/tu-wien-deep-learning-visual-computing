@@ -1,0 +1,22 @@
+{% if format == "pdf" %}
+
+import * as Plot from "npm:@observablehq/plot";
+import * as d3 from "npm:d3";
+import { JSDOM } from "npm:jsdom";
+import { readFileSync, writeFileSync } from "node:fs";
+
+const dom = new JSDOM("");
+
+{% endif %}
+
+
+{% include fig ~ ".js.jinja" %}
+
+
+{% if format == "pdf" %}
+const svgEl = figure.tagName && figure.tagName.toLowerCase() === "svg"
+  ? figure
+  : figure.querySelector("svg");
+const svgOut = svgEl.outerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" ');
+writeFileSync("{{ fig_path }}", '<?xml version="1.0" encoding="utf-8"?>\n' + svgOut);
+{% endif %}

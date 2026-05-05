@@ -12,3 +12,6 @@
 **/_extensions
 **/site_libs
 **/*.typ
+
+# Other build artifacts
+**/build/
