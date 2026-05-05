@@ -16,3 +16,12 @@ bibliography: bibliography.bib
 
 {{< include build/figures/test_accuracy.qmd >}}
 
+### Figure 1: Validation Mean Per-Class Accuracy
+
+::: {#fig-curves}
+
+{{< include build/figures/val_accuracy_curves.qmd >}}
+
+Validation mean per-class accuracy for the best CNN, ResNet18, and ViT configurations. The checkpoint for each model was selected according to the highest validation mean per-class accuracy.
+
+:::

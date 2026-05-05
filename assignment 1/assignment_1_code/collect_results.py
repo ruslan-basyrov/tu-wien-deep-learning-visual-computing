@@ -22,15 +22,12 @@ PROJECT = os.getenv("WANDB_PROJECT", "dlvs-assignment-1")
 GROUPS = ["resnet18", "yourCNN", "yourViT"]
 
 HISTORY_KEYS = [
-    "train/loss",
+    "train/mean_loss",
     "train/accuracy",
-    "train/per_class_accuracy",
-    "val/loss",
+    "train/mean_accuracy",
+    "val/mean_loss",
     "val/accuracy",
-    "val/per_class_accuracy",
-    "test/loss",
-    "test/accuracy",
-    "test/per_class_accuracy",
+    "val/mean_accuracy",
 ]
 
 
@@ -49,6 +46,21 @@ def fetch_summary(runs) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def fetch_history(runs) -> pd.DataFrame:
+    frames = []
+    for run in runs:
+        hist = run.history()
+        if hist.empty:
+            continue
+        keep = ["_step"] + [k for k in HISTORY_KEYS if k in hist.columns]
+        hist = hist[keep].copy()
+        hist.insert(0, "run_id", run.id)
+        hist.insert(1, "name", run.name)
+        hist.insert(2, "group", run.group)
+        frames.append(hist)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
 def main(out_dir: Path):
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -64,6 +76,14 @@ def main(out_dir: Path):
     summary_path = out_dir / "summary.csv"
     summary_df.to_csv(summary_path, index=False)
     print(f"Summary saved → {summary_path}  ({len(summary_df)} rows)")
+
+    history_df = fetch_history(runs)
+    if not history_df.empty:
+        history_path = out_dir / "history.csv"
+        history_df.to_csv(history_path, index=False)
+        print(f"History saved → {history_path}  ({len(history_df)} rows)")
+    else:
+        print("No history data found (runs may still be in progress or no metrics logged yet).")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,77 @@
+{% if format == "html" %}
+
+summary = FileAttachment("results/summary.csv").csv({ typed: true })
+history = FileAttachment("results/history.csv").csv({ typed: true })
+
+bestRunIds = new Map(
+  d3.rollups(
+    summary.filter(d => d["val/mean_accuracy"] != null),
+    rows => rows.reduce((a, b) => a["val/mean_accuracy"] > b["val/mean_accuracy"] ? a : b),
+    d => d.group
+  ).map(([group, row]) => [row.run_id, group])
+)
+
+valCurves = history
+  .filter(d => bestRunIds.has(d.run_id) && d["val/mean_accuracy"] != null)
+  .map(d => ({ epoch: d._step, accuracy: d["val/mean_accuracy"], model: bestRunIds.get(d.run_id) }))
+
+{% elif format == "pdf" %}
+
+const summary = d3.csvParse(readFileSync("results/summary.csv", "utf8"), d3.autoType);
+const history = d3.csvParse(readFileSync("results/history.csv", "utf8"), d3.autoType);
+
+const bestRunIds = new Map(
+  d3.rollups(
+    summary.filter(d => d["val/mean_accuracy"] != null),
+    rows => rows.reduce((a, b) => a["val/mean_accuracy"] > b["val/mean_accuracy"] ? a : b),
+    d => d.group
+  ).map(([group, row]) => [row.run_id, group])
+);
+
+const valCurves = history
+  .filter(d => bestRunIds.has(d.run_id) && d["val/mean_accuracy"] != null)
+  .map(d => ({ epoch: d._step, accuracy: d["val/mean_accuracy"], model: bestRunIds.get(d.run_id) }));
+
+{% endif %}
+
+
+{% if format == "pdf" %}const figure = {% endif %}Plot.plot({
+  width: 640,
+  height: 300,
+  marginRight: 100,
+  {% if format == "pdf" %}document: dom.window.document,{% endif %}
+  x: { label: "Epoch" },
+  y: {
+    label: "Val Per-Class Accuracy",
+    tickFormat: d => `${(d * 100).toFixed(0)}%`
+  },
+  color: {
+    legend: {% if format == "html" %}true{% else %}false{% endif %},
+    domain: ["resnet18", "yourCNN", "yourViT"],
+    range: ["#4269d0", "#efb118", "#ff725c"]
+  },
+  marks: [
+    Plot.line(valCurves, {
+      x: "epoch",
+      y: "accuracy",
+      stroke: "model",
+      strokeWidth: 2,
+      {% if format == "html" %}tip: true,{% endif %}
+    }),
+    Plot.dot(valCurves, {
+      x: "epoch",
+      y: "accuracy",
+      fill: "model",
+      r: 3
+    }),
+    Plot.text(valCurves, Plot.selectLast({
+      x: "epoch",
+      y: "accuracy",
+      text: "model",
+      fill: "model",
+      dx: 6,
+      textAnchor: "start",
+      fontSize: 11
+    }))
+  ]
+})
