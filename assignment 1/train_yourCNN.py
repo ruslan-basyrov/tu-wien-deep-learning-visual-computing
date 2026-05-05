@@ -67,6 +67,8 @@ def train(args):
     val_data = CIFAR10Dataset(DATA_DIR, Subset.VALIDATION, transform=transforms["none"])
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
 
     model_save_dir = Path(MODEL_SAVE_DIR) / "yourCNN"
     model_save_dir.mkdir(parents=True, exist_ok=True)
@@ -105,6 +107,7 @@ def train(args):
                 "batch_size": args.batch_size,
                 "num_epochs": args.num_epochs,
             },
+            group="yourCNN",
         )
 
         trainer = ImgClassificationTrainer(
@@ -121,6 +124,8 @@ def train(args):
             exp_save_dir,
             batch_size=args.batch_size,
             val_frequency=5,
+            num_workers=8,
+            prefetch_factor=4,
             logger=logger,
         )
 
